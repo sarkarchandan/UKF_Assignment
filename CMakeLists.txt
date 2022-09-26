@@ -1,23 +1,30 @@
-cmake_minimum_required(VERSION 2.8 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.0...3.22)
 
-add_definitions(-std=c++11)
-
-set(CXX_FLAGS "-Wall")
-set(CMAKE_CXX_FLAGS, "${CXX_FLAGS}")
+if(${CMAKE_VERSION} VERSION_LESS 3.22)
+    cmake_policy(VERSION ${CMAKE_MAJOR_VERSION}.${CMAKE_MINOR_VERSION})
+endif()
 
 project(playback)
 
-find_package(PCL 1.2 REQUIRED)
+find_package(Eigen3 REQUIRED)
+find_package(PCL 1.12 REQUIRED)
 
 include_directories(${PCL_INCLUDE_DIRS})
 link_directories(${PCL_LIBRARY_DIRS})
 add_definitions(${PCL_DEFINITIONS})
+
 list(REMOVE_ITEM PCL_LIBRARIES "vtkproj4")
 
+set(SOURCES
+    src/render/render.cpp
+    src/tools.cpp
+    src/ukf.cpp
+    src/main.cpp
+)
 
-add_executable (ukf_highway src/main.cpp src/ukf.cpp src/tools.cpp src/render/render.cpp)
-target_link_libraries (ukf_highway ${PCL_LIBRARIES})
-
-
-
+set(EXEC_NAME ukf_highway)
+add_executable (${EXEC_NAME} ${SOURCES})
+target_link_libraries(${EXEC_NAME} ${Eigen3_Libs})
+target_link_libraries (${EXEC_NAME} ${PCL_LIBRARIES})
+target_compile_features(${EXEC_NAME} PRIVATE cxx_std_17)
 
