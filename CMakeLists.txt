@@ -7,7 +7,7 @@ endif()
 project(playback)
 
 find_package(Eigen3 REQUIRED)
-find_package(PCL 1.12 REQUIRED)
+find_package(PCL 1.2 REQUIRED)
 
 include_directories(${PCL_INCLUDE_DIRS})
 link_directories(${PCL_LIBRARY_DIRS})
@@ -16,15 +16,16 @@ add_definitions(${PCL_DEFINITIONS})
 list(REMOVE_ITEM PCL_LIBRARIES "vtkproj4")
 
 set(SOURCES
-    src/render/render.cpp
-    src/tools.cpp
-    src/ukf.cpp
     src/main.cpp
+    src/ukf.cpp
+    src/tools.cpp
+    src/render/render.cpp
 )
 
 set(EXEC_NAME ukf_highway)
-add_executable (${EXEC_NAME} ${SOURCES})
+
+add_executable(${EXEC_NAME} ${SOURCES})
 target_link_libraries(${EXEC_NAME} ${Eigen3_Libs})
-target_link_libraries (${EXEC_NAME} ${PCL_LIBRARIES})
+target_link_libraries(${EXEC_NAME} ${PCL_LIBRARIES})
 target_compile_features(${EXEC_NAME} PRIVATE cxx_std_17)
 
