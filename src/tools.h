@@ -1,13 +1,13 @@
 #ifndef TOOLS_H_
 #define TOOLS_H_
+
 #include <vector>
-#include "Eigen/Dense"
-#include "render/render.h"
+#include <random>
+#include <iostream>
+#include <eigen3/Eigen/Dense>
 #include <pcl/io/pcd_io.h>
 
-using Eigen::MatrixXd;
-using Eigen::VectorXd;
-using namespace std;
+#include "render/render.h"
 
 /// @brief Defines the measurement components for Lidar
 struct lmarker
@@ -44,8 +44,8 @@ public:
 	virtual ~Tools();
 
 	// Members
-	std::vector<VectorXd> estimations;
-	std::vector<VectorXd> ground_truth;
+	std::vector<Eigen::VectorXd> estimations;
+	std::vector<Eigen::VectorXd> ground_truth;
 
 	double noise(double stddev, long long seedNum);
 	lmarker lidarSense(Car &car, pcl::visualization::PCLVisualizer::Ptr &viewer, long long timestamp, bool visualize);
@@ -54,7 +54,7 @@ public:
 	/**
 	 * A helper method to calculate RMSE.
 	 */
-	VectorXd CalculateRMSE(const vector<VectorXd> &estimations, const vector<VectorXd> &ground_truth);
+	Eigen::VectorXd CalculateRMSE(const std::vector<Eigen::VectorXd> &estimations, const std::vector<Eigen::VectorXd> &ground_truth);
 	void savePcd(typename pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, std::string file);
 	pcl::PointCloud<pcl::PointXYZ>::Ptr loadPcd(std::string file);
 };

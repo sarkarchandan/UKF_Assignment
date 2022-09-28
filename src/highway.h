@@ -1,6 +1,3 @@
-/* \author Aaron Brown */
-// Handle logic for creating traffic on highway and animating it
-
 #include "render/render.h"
 #include "sensors/lidar.h"
 #include "tools.h"
@@ -141,13 +138,13 @@ public:
 			{
 				// Define ground truth state vector. This would be later used against the
 				// estimated state by the Unscented Kalman Filter to compute the RMSE
-				VectorXd gt(4);
+				Eigen::VectorXd gt(4);
 				gt << traffic[i].position.x, traffic[i].position.y, traffic[i].velocity * cos(traffic[i].angle), traffic[i].velocity * sin(traffic[i].angle);
 				tools.ground_truth.push_back(gt);
 				tools.lidarSense(traffic[i], viewer, timestamp, visualize_lidar);
 				tools.radarSense(traffic[i], egoCar, viewer, timestamp, visualize_radar);
 				tools.ukfResults(traffic[i], viewer, projectedTime, projectedSteps);
-				VectorXd estimate(4);
+				Eigen::VectorXd estimate(4);
 				double v = traffic[i].ukf.x_(2);
 				double yaw = traffic[i].ukf.x_(3);
 				double v1 = cos(yaw) * v;
@@ -157,7 +154,7 @@ public:
 			}
 		}
 		viewer->addText("Accuracy - RMSE:", 30, 300, 20, 1, 1, 1, "rmse");
-		VectorXd rmse = tools.CalculateRMSE(tools.estimations, tools.ground_truth);
+		Eigen::VectorXd rmse = tools.CalculateRMSE(tools.estimations, tools.ground_truth);
 		viewer->addText(" X: " + std::to_string(rmse[0]), 30, 275, 20, 1, 1, 1, "rmse_x");
 		viewer->addText(" Y: " + std::to_string(rmse[1]), 30, 250, 20, 1, 1, 1, "rmse_y");
 		viewer->addText("Vx: " + std::to_string(rmse[2]), 30, 225, 20, 1, 1, 1, "rmse_vx");
