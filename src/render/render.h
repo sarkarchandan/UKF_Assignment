@@ -11,6 +11,7 @@
 #include <string>
 #include "../ukf.h"
 
+/// @brief Defines a color in the RGB color space
 struct Color
 {
 
@@ -22,6 +23,7 @@ struct Color
 	}
 };
 
+/// @brief Defines a three element homogeneous collection of values
 struct Vect3
 {
 
@@ -39,6 +41,7 @@ struct Vect3
 	}
 };
 
+/// @brief Defines possible camera angles for the visualization
 enum CameraAngle
 {
 	XY,
@@ -47,6 +50,7 @@ enum CameraAngle
 	FPS
 };
 
+/// @brief Defines how the car will move in the highway
 struct accuation
 {
 	long long time_us;
@@ -59,6 +63,7 @@ struct accuation
 	}
 };
 
+/// @brief Defines a car and its behavior
 struct Car
 {
 
@@ -100,7 +105,14 @@ struct Car
 		cosNegTheta = cos(-angle);
 	}
 
-	// angle around z axis
+	/**
+	 * @brief Defines the rotation around z-axis by the
+	 * angle theta. This is used to define the orientation
+	 * of a car in the three-dimensional space.
+	 *
+	 * @param theta angle
+	 * @return Eigen::Quaternionf
+	 */
 	Eigen::Quaternionf getQuaternion(float theta)
 	{
 		Eigen::Matrix3f rotation_mat;
@@ -141,7 +153,7 @@ struct Car
 		steering = setSteer;
 	}
 
-	void setInstructions(std::vector<accuation> setIn)
+	void setInstructions(std::vector<accuation> const &setIn)
 	{
 		for (accuation a : setIn)
 			instructions.push_back(a);
@@ -152,6 +164,16 @@ struct Car
 		ukf = tracker;
 	}
 
+	/**
+	 * @brief Implements the movement of a car. In practice it updates
+	 * the parameters of a car in 3D space. These parameters include
+	 * position, orientation, velocity etc. This method is invoked from
+	 * the Highway::stepHighway method to define the state of the highway
+	 * for each time step just before the tracking.
+	 *
+	 * @param dt Time in second to render a frame
+	 * @param time_us Time stamp
+	 */
 	void move(float dt, int time_us)
 	{
 

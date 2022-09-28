@@ -5,14 +5,18 @@
 #include "sensors/lidar.h"
 #include "tools.h"
 
+/// @brief Encapsulates logic for creating traffic on simulated highway and
+/// animating the same. This defines the setpHighway method, which controls
+/// the behavior of each traffic element before the visualizer can render
+/// the same for each unit time step.
 class Highway
 {
 public:
-	std::vector<Car> traffic;
-	Car egoCar;
+	std::vector<Car> traffic; /*Simulated car traffics on the highway*/
+	Car egoCar;				  /*Simulated car with the sensors*/
 	Tools tools;
 	bool pass = true;
-	std::vector<double> rmseThreshold = {0.30, 0.16, 0.95, 0.70};
+	std::vector<double> rmseThreshold = {0.30, 0.16, 0.95, 0.70}; /*Error threshold values that filter estimates must meet*/
 	std::vector<double> rmseFailLog = {0.0, 0.0, 0.0, 0.0};
 	Lidar *lidar;
 
@@ -29,14 +33,16 @@ public:
 	int projectedSteps = 0;
 	// --------------------------------
 
+	/// @brief Constructor for Highway
+	/// @param viewer PCL visualizer by pointer reference
 	Highway(pcl::visualization::PCLVisualizer::Ptr &viewer)
 	{
 
 		tools = Tools();
-
+		// Instantiate the main car with sensors
 		egoCar = Car(Vect3(0, 0, 0), Vect3(4, 2, 2), Color(0, 1, 0), 0, 0, 2, "egoCar");
+		// Instantiate the first car to track
 		Car car1(Vect3(-10, 4, 0), Vect3(4, 2, 2), Color(0, 0, 1), 5, 0, 2, "car1");
-
 		std::vector<accuation> car1_instructions;
 		accuation a = accuation(0.5 * 1e6, 0.5, 0.0);
 		car1_instructions.push_back(a);
@@ -53,7 +59,7 @@ public:
 			car1.setUKF(ukf1);
 		}
 		traffic.push_back(car1);
-
+		// Instantiate the second car to track
 		Car car2(Vect3(25, -4, 0), Vect3(4, 2, 2), Color(0, 0, 1), -6, 0, 2, "car2");
 		std::vector<accuation> car2_instructions;
 		a = accuation(4.0 * 1e6, 3.0, 0.0);
@@ -67,7 +73,7 @@ public:
 			car2.setUKF(ukf2);
 		}
 		traffic.push_back(car2);
-
+		// Instantiate the third car to track
 		Car car3(Vect3(-12, 0, 0), Vect3(4, 2, 2), Color(0, 0, 1), 1, 0, 2, "car3");
 		std::vector<accuation> car3_instructions;
 		a = accuation(0.5 * 1e6, 2.0, 1.0);
@@ -102,27 +108,39 @@ public:
 		car3.render(viewer);
 	}
 
+	/**
+	 * @brief Control the behavior of the traffic elements on the highway for
+	 * unit time step.
+	 *
+	 * @param egoVelocity Scalar velocity of the ego car with sensors.
+	 * @param timestamp Time step
+	 * @param frame_per_sec FPS for visualization
+	 * @param viewer PCL visualizer by pointer reference
+	 */
 	void stepHighway(double egoVelocity, long long timestamp, int frame_per_sec, pcl::visualization::PCLVisualizer::Ptr &viewer)
 	{
 
-		if (visualize_pcd)
+		if (visualize_pcd) // Point cloud visualization is set to false by default
 		{
 			pcl::PointCloud<pcl::PointXYZ>::Ptr trafficCloud = tools.loadPcd("../src/sensors/data/pcd/highway_" + std::to_string(timestamp) + ".pcd");
 			renderPointCloud(viewer, trafficCloud, "trafficCloud", Color((float)184 / 256, (float)223 / 256, (float)252 / 256));
 		}
 
-		// render highway environment with poles
+		// Render highway environment with poles
 		renderHighway(egoVelocity * timestamp / 1e6, viewer);
 		egoCar.render(viewer);
-
+		// For each car to be tracked
 		for (int i = 0; i < traffic.size(); i++)
 		{
+			// Move the car i.e. update position,orientation, velocity
 			traffic[i].move((double)1 / frame_per_sec, timestamp);
 			if (!visualize_pcd)
 				traffic[i].render(viewer);
 			// Sense surrounding cars with lidar and radar
 			if (trackCars[i])
 			{
+				// Define ground truth state vector. This would be later used against the
+				// estimated state by the Unscented Kalman Filter to compute the RMSE
 				VectorXd gt(4);
 				gt << traffic[i].position.x, traffic[i].position.y, traffic[i].velocity * cos(traffic[i].angle), traffic[i].velocity * sin(traffic[i].angle);
 				tools.ground_truth.push_back(gt);
