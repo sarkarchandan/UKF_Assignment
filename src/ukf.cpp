@@ -17,6 +17,9 @@ UKF::UKF()
   // initial covariance matrix
   P_ = Eigen::MatrixXd(5, 5);
 
+  // TODO: Can we initialize state vector and covariance matrix from a standard
+  // normal distribution ?
+
   // Process noise standard deviation longitudinal acceleration in m/s^2
   std_a_ = 3; // Starting value for longitudinal acceleration noise
 
@@ -68,6 +71,13 @@ UKF::UKF()
   {
     weights_[idx] = 1 / (2 * (lambda_ + n_aug_));
   }
+
+  // predicted sigma points matrix
+  // Eigen::MatrixXd Xsig_pred_;
+  // TODO: We need to initialize this matrix with augmented sigma points i.e., this
+  // matrix would be (7x15) matrix which would be initialized at first and then with
+  // each execution of the process model, this matrix would be updated. This update
+  // happens inside the Prediction method.
 }
 
 UKF::~UKF() {}
@@ -78,6 +88,14 @@ void UKF::ProcessMeasurement(MeasurementPackage meas_package)
    * TODO: Complete this function! Make sure you switch between lidar and radar
    * measurements.
    */
+  // TODO: This is the entry point for Update step. We need to keep in mind that
+  // lidarSense / radarSense of the Tool class never calls the UpdateLidar or
+  // UpdateRadar directly. They always call this method. In this method we have
+  // to check the sensor_type_ of the MeasurementPackage and invoke the correct
+  // Update function.
+  // Intuitively, this method is similar to PredictRadarMeasurement method from
+  // the lectures. And then it calls either of the Update method to implement
+  // what we did in the UpdateState method.
 }
 
 void UKF::Prediction(double delta_t)
@@ -87,6 +105,9 @@ void UKF::Prediction(double delta_t)
    * Modify the state vector, x_. Predict sigma points, the state,
    * and the state covariance matrix.
    */
+  // TODO: In general, this method implements the process model. This does
+  // what we did in the SigmaPointPrediction and PredictMeanAndCovariance
+  // methods during the lecture.
 }
 
 void UKF::UpdateLidar(MeasurementPackage meas_package)
@@ -97,6 +118,7 @@ void UKF::UpdateLidar(MeasurementPackage meas_package)
    * covariance, P_.
    * You can also calculate the lidar NIS, if desired.
    */
+  // TODO: Identical to UpdateState method
 }
 
 void UKF::UpdateRadar(MeasurementPackage meas_package)
@@ -107,4 +129,5 @@ void UKF::UpdateRadar(MeasurementPackage meas_package)
    * covariance, P_.
    * You can also calculate the radar NIS, if desired.
    */
+  // TODO: Identical to UpdateState method
 }
