@@ -4,9 +4,9 @@
 #include <vector>
 #include <random>
 #include <iostream>
-#include <eigen3/Eigen/Dense>
 #include <pcl/io/pcd_io.h>
 
+#include "Eigen/Dense"
 #include "render/render.h"
 
 /// @brief Defines the measurement components for Lidar
@@ -33,14 +33,10 @@ struct rmarker
 class Tools
 {
 public:
-	/**
-	 * Constructor.
-	 */
+	/// @brief Constructor for Tools
 	Tools();
 
-	/**
-	 * Destructor.
-	 */
+	/// @brief Destructor for Tools
 	virtual ~Tools();
 
 	// Members
