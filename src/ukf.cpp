@@ -81,7 +81,7 @@ UKF::UKF()
   // Predicted sigma points matrix R^(5x15)
   // Sigma points in this matrix represent the predicted state distribution by the
   // unscented Kalman filter at each time step. We initialize this as 0-value matrix.
-  Xsig_pred_ = Eigen::MatrixXd::Zero(n_x_, 2 * n_aug_ + 1);
+  Xsig_pred_ = Eigen::MatrixXd(n_x_, 2 * n_aug_ + 1);
 
   /// Initialize private member attributes
 
