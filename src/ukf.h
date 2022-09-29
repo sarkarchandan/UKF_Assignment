@@ -120,6 +120,14 @@ private:
    */
   void augmentState(Eigen::MatrixXd *X_aug_out);
 
+  /// @brief Translates the predicted apriori sigma points to Radar
+  /// measurement space.
+  void translateStateToRadar();
+
+  /// @brief Translates the predicted apriori sigma points to Lidar
+  /// measurement space.
+  void translateStateToLidar();
+
   /// Private member attributes
 
   /// While defining the private member attributes we would try to avoid having
