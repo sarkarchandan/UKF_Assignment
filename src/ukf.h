@@ -137,19 +137,25 @@ private:
   /// the greater of the two. While computing these vector quantities we'd then
   /// consider the appropriate measurement dimensions.
 
-  // Common measurement space dimension for Lidar and Radar. Taking the greater
-  // of the two.
-  int n_z_radar_;  // 3
-  int n_z_lidar_;  // 2
-  int n_z_common_; // Should be 3
+  // Measurement space dimensions
+  int n_z_radar_; // 3
+  int n_z_lidar_; // 2
 
-  // Common translated sigma point state distribution into measurement space for
-  // Lidar and Radar
-  Eigen::MatrixXd Z_sig_common_; // Should be R^(n_z_common_, 2 * n_aug_ + 1)
-  // Common translated state mean into measurement space for Lidar and Radar
-  Eigen::VectorXd z_pred_common_; // Should be R^n_z_common_
-  // Common measurement covariance matrix for Lidar and Radar
-  Eigen::MatrixXd S_common_; // Should be R^(n_z_common_, n_z_common_)
+  // Sigma points matrix for measurement space for processing Radar
+  Eigen::MatrixXd Z_sig_radar_; // Should have dimension R^(n_z_radar_, 2 * n_aug_ + 1)
+  // Predicted mean measurement vector for Radar
+  Eigen::VectorXd z_pred_radar_; // Should have dimension R^(n_z_radar_)
+  // Predicted measurement covariance matrix for Radar
+  Eigen::MatrixXd S_radar_; // Should have dimension R^(n_z_radar_, n_z_radar_)
+
+  // Linear state transformation matrix for Lidar
+  Eigen::MatrixXd H_lidar_; // Should have dimension R^(n_z_lidar_, n_x_)
+  // Measurement noise covariance matrix for Lidar
+  Eigen::MatrixXd R_lidar_; // Should have dimension R^(n_z_lidar_, n_z_lidar_)
+  // Predicted mean measurement vector for Lidar
+  Eigen::VectorXd z_pred_lidar_; // Should have dimension R^(n_z_lidar_);
+  // Predicted measurement covariance matrix for Lidar
+  Eigen::MatrixXd S_lidar_; // Should have dimension R^(n_z_lidar_, n_z_lidar_)
 };
 
 #endif // UKF_H
