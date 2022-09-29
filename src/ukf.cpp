@@ -16,21 +16,27 @@ UKF::UKF()
   // if this is false, radar measurements will be ignored (except during init)
   use_radar_ = true;
 
+  // State dimension
+  n_x_ = 5;
+
+  // Augmented state dimension
+  n_aug_ = 7;
+
   // initial state vector
   // NOTE: As a starting point we initialized as random. When the first Lidar
   // measurement comes, we'd set the position_x and position_y. Until then we
   // would consider the UKF state as uninitialized.
   // The random initialization is subjected to tuning.
-  x_ = Eigen::VectorXd::Random(n_x_);
+  x_ = Eigen::VectorXd(n_x_);
 
   // initial covariance matrix
-  P_ = Eigen::MatrixXd::Identity(n_x_, n_x_);
+  P_ = Eigen::MatrixXd(n_x_, n_x_);
 
   // Process noise standard deviation longitudinal acceleration in m/s^2
-  std_a_ = 3; // Starting value for longitudinal acceleration noise
+  std_a_ = 1; // Starting value for longitudinal acceleration noise
 
   // Process noise standard deviation yaw acceleration in rad/s^2
-  std_yawdd_ = M_PI; // Starting value for yaw acceleration noise
+  std_yawdd_ = 0.8; // Starting value for yaw acceleration noise
 
   /**
    * DO NOT MODIFY measurement noise values below.
@@ -60,12 +66,6 @@ UKF::UKF()
    * TODO: Complete the initialization. See ukf.h for other member properties.
    * Hint: one or more values initialized above might be wildly off...
    */
-
-  // State dimension
-  n_x_ = 5;
-
-  // Augmented state dimension
-  n_aug_ = 7;
 
   // Sigma point spreading parameter
   lambda_ = 3 - n_aug_;
@@ -219,10 +219,6 @@ void UKF::ProcessMeasurement(MeasurementPackage meas_package)
    * TODO: Complete this function! Make sure you switch between lidar and radar
    * measurements.
    */
-  // Intuitively, this method is similar to PredictRadarMeasurement method from
-  // the lectures. And then it calls either of the Update method to implement
-  // what we did in the UpdateState method.
-
   // If the internal state is uninitialized and measurement is the first Lidar
   // measurement we initialize x and y positions of the state vector. We are
   // specifically pairing the initialization with the Lidar measurement because
@@ -232,6 +228,8 @@ void UKF::ProcessMeasurement(MeasurementPackage meas_package)
   // velocity available from the Radar.
   if (!is_initialized_)
   {
+    x_.fill(0.);
+    P_.fill(0.);
     if (use_laser_ && meas_package.sensor_type_ == MeasurementPackage::LASER)
     {
       x_[0] = meas_package.raw_measurements_[0];
@@ -260,7 +258,7 @@ void UKF::ProcessMeasurement(MeasurementPackage meas_package)
   // as per the sensor type.
 
   // Compute elapsed time delta since last measurement and update current timestamp
-  double delta_t = static_cast<double>((meas_package.timestamp_ - timestamp_mis_) / 1e6);
+  double delta_t = static_cast<double>((meas_package.timestamp_ - timestamp_mis_) / 1000000.0);
   timestamp_mis_ = meas_package.timestamp_;
 
   // Predict phase
@@ -328,11 +326,13 @@ void UKF::Prediction(double delta_t)
     Xsig_pred_.col(col_idx) = x + state_offset;
   }
   // Compute state vector mean
+  x_.fill(0.);
   for (size_t idx = 0; idx < 2 * n_aug_ + 1; idx++)
   {
     x_ += weights_[idx] * Xsig_pred_.col(idx);
   }
   // Compute state covariance matrix
+  P_.fill(0.);
   for (size_t idx = 0; idx < 2 * n_aug_ + 1; idx++)
   {
     Eigen::VectorXd x_diff = Xsig_pred_.col(idx) - x_;

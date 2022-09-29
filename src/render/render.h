@@ -159,7 +159,7 @@ struct Car
 			instructions.push_back(a);
 	}
 
-	void setUKF(UKF tracker)
+	void setUKF(UKF &tracker)
 	{
 		ukf = tracker;
 	}
