@@ -20,17 +20,11 @@ UKF::UKF()
   // NOTE: As a starting point we initialized as random. When the first Lidar
   // measurement comes, we'd set the position_x and position_y. Until then we
   // would consider the UKF state as uninitialized.
-  // The strategy of initialization is subjected to tuning.
+  // The random initialization is subjected to tuning.
   x_ = Eigen::VectorXd::Random(n_x_);
 
   // initial covariance matrix
-  P_ = Eigen::MatrixXd::Zero(n_x_, n_x_);
-  // NOTE: As a starting point we initialized as a diagonal matrix with initial
-  // variance of the all components as 0.8. This is subjected to tuning.
-  for (size_t idx = 0; idx < n_x_; idx++)
-  {
-    P_(idx, idx) = 0.8;
-  }
+  P_ = Eigen::MatrixXd::Identity(n_x_, n_x_);
 
   // Process noise standard deviation longitudinal acceleration in m/s^2
   std_a_ = 3; // Starting value for longitudinal acceleration noise
@@ -98,11 +92,11 @@ UKF::UKF()
   n_z_common_ = n_z_lidar_ > n_z_radar_ ? n_z_lidar_ : n_z_radar_;
   // Common translated sigma point state distribution into measurement space for
   // Lidar and Radar
-  Z_sig_common_ = Eigen::MatrixXd(n_z_common_, 2 * n_aug_ + 1);
+  Z_sig_common_ = Eigen::MatrixXd::Zero(n_z_common_, 2 * n_aug_ + 1);
   // Common translated state mean into measurement space for Lidar and Radar
-  z_pred_common_ = Eigen::VectorXd(n_z_common_);
+  z_pred_common_ = Eigen::VectorXd::Zero(n_z_common_);
   // Common measurement covariance matrix for Lidar and Radar
-  S_common_ = Eigen::MatrixXd(n_z_common_, n_z_common_);
+  S_common_ = Eigen::MatrixXd::Zero(n_z_common_, n_z_common_);
 }
 
 UKF::~UKF() {}
@@ -222,22 +216,49 @@ void UKF::ProcessMeasurement(MeasurementPackage meas_package)
   // Lidar or Radar. That argument is valid with the velocity magnitude as well
   // because velocity magnitude in context of UKF state is not same as radial
   // velocity available from the Radar.
-  if (!is_initialized_ && meas_package.sensor_type_ == MeasurementPackage::LASER)
+  if (!is_initialized_)
   {
-    x_[0] = meas_package.raw_measurements_[0];
-    x_[1] = meas_package.raw_measurements_[1];
+    if (use_laser_ && meas_package.sensor_type_ == MeasurementPackage::LASER)
+    {
+      x_[0] = meas_package.raw_measurements_[0];
+      x_[1] = meas_package.raw_measurements_[1];
+      P_(0, 0) = std::pow(std_laspx_, 2.);
+      P_(1, 1) = std::pow(std_laspy_, 2.);
+    }
+    else if (use_radar_ && meas_package.sensor_type_ == MeasurementPackage::RADAR)
+    {
+      double radial_distance_roh = meas_package.raw_measurements_[0];
+      double angle_phi = meas_package.raw_measurements_[1];
+      x_[0] = radial_distance_roh * std::cos(angle_phi);
+      x_[1] = radial_distance_roh * std::sin(angle_phi);
+      P_(0, 0) = std::pow(std_radr_, 2.);
+      P_(1, 1) = std::pow(std_radr_, 2.);
+      P_(2, 2) = std::pow(std_radrd_, 2.);
+      P_(3, 3) = std::pow(std_radphi_, 2.);
+      P_(4, 4) = std::pow(std_radrd_, 2.);
+    }
+    timestamp_mis_ = meas_package.timestamp_;
     is_initialized_ = true;
     return;
   }
   // With program control reaching here we can assume that the UKF state vector is
   // initialized with the earlier invocation and we can then process the measurements
   // as per the sensor type.
-  if (meas_package.sensor_type_ == MeasurementPackage::LASER)
+
+  // Compute elapsed time delta since last measurement and update current timestamp
+  double delta_t = static_cast<double>((meas_package.timestamp_ - timestamp_mis_) / 1e6);
+  timestamp_mis_ = meas_package.timestamp_;
+
+  // Predict phase
+  this->Prediction(delta_t);
+
+  // Update phase
+  if (use_laser_ && meas_package.sensor_type_ == MeasurementPackage::LASER)
   {
     this->translateStateToLidar();
     this->UpdateLidar(meas_package);
   }
-  else
+  else if (use_radar_ && meas_package.sensor_type_ == MeasurementPackage::RADAR)
   {
     this->translateStateToRadar();
     this->UpdateRadar(meas_package);
