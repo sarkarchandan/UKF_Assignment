@@ -245,12 +245,14 @@ void UKF::ProcessMeasurement(MeasurementPackage meas_package)
   // velocity available from the Radar.
   if (!is_initialized_)
   {
-    x_.fill(0.);
     P_ = Eigen::MatrixXd::Identity(n_x_, n_x_);
     if (use_laser_ && meas_package.sensor_type_ == MeasurementPackage::LASER)
     {
-      x_[0] = meas_package.raw_measurements_[0];
-      x_[1] = meas_package.raw_measurements_[1];
+      x_ << meas_package.raw_measurements_[0],
+          meas_package.raw_measurements_[1],
+          0.,
+          0.,
+          0.;
       P_(0, 0) = std::pow(std_laspx_, 2.);
       P_(1, 1) = std::pow(std_laspy_, 2.);
     }
@@ -258,8 +260,11 @@ void UKF::ProcessMeasurement(MeasurementPackage meas_package)
     {
       double radial_distance_roh = meas_package.raw_measurements_[0];
       double angle_phi = meas_package.raw_measurements_[1];
-      x_[0] = radial_distance_roh * std::cos(angle_phi);
-      x_[1] = radial_distance_roh * std::sin(angle_phi);
+      x_ << radial_distance_roh * std::cos(angle_phi),
+          radial_distance_roh * std::sin(angle_phi),
+          0.,
+          0.,
+          0.;
       P_(0, 0) = std::pow(std_radr_, 2.);
       P_(1, 1) = std::pow(std_radr_, 2.);
       P_(2, 2) = std::pow(std_radrd_, 2.);
