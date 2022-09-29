@@ -18,7 +18,7 @@ public:
   /// @brief Destructor
   virtual ~UKF();
 
-  /// Public methods
+  /// Public member functions
 
   /**
    * @brief Acts as an entrypoint for the sensor measurements. Before invoking
@@ -32,7 +32,8 @@ public:
 
   /**
    * @brief Predicts sigma points, the state, and the state covariance
-   * matrix
+   * matrix. This method executes the process model to derive the `a priori`
+   * state.
    * @param delta_t Time between k and k+1 in s
    */
   void Prediction(double delta_t);
@@ -50,7 +51,8 @@ public:
   void UpdateRadar(MeasurementPackage meas_package);
 
   /// Public member attributes
-  // initially set to false, set to true in first call of ProcessMeasurement
+
+  // Initially set to false, set to true in first call of ProcessMeasurement
   bool is_initialized_;
 
   // if this is false, laser measurements will be ignored (except for init)
@@ -105,6 +107,19 @@ public:
   double lambda_;
 
 private:
+  /// Private member functions
+
+  /**
+   * @brief Executes the augmentation technique in order to incorporate the
+   * longitudinal and yaw acceleration noise components into state vector,
+   * state covariance matrix and sigma points. This method is meant to be
+   * called by Prediction method before computing `a priori` state.
+   *
+   * @param X_aug_out Augmented sigma point matrix from the current state.
+   * Expected dimension R^(n_aug_, 2 * n_aug_ + 1)
+   */
+  void augmentState(Eigen::MatrixXd *X_aug_out);
+
   /// Private member attributes
 
   /// While defining the private member attributes we would try to avoid having
@@ -119,6 +134,7 @@ private:
   int n_z_radar_;  // 3
   int n_z_lidar_;  // 2
   int n_z_common_; // Should be 3
+
   // Common translated sigma point state distribution into measurement space for
   // Lidar and Radar
   Eigen::MatrixXd Z_sig_common_; // Should be R^(n_z_common_, 2 * n_aug_ + 1)
