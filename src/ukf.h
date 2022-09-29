@@ -150,10 +150,8 @@ private:
   // Predicted measurement covariance matrix for Radar
   Eigen::MatrixXd S_radar_; // Should have dimension R^(n_z_radar_, n_z_radar_)
 
-  // Linear state transformation matrix for Lidar
-  Eigen::MatrixXd H_lidar_; // Should have dimension R^(n_z_lidar_, n_x_)
-  // Measurement noise covariance matrix for Lidar
-  Eigen::MatrixXd R_lidar_; // Should have dimension R^(n_z_lidar_, n_z_lidar_)
+  // Sigma point matrix for measurement space for processing Lidar
+  Eigen::MatrixXd Z_sig_lidar_; // Should have dimension R^(n_z_lidar_, 2 * n_aug + 1)
   // Predicted mean measurement vector for Lidar
   Eigen::VectorXd z_pred_lidar_; // Should have dimension R^(n_z_lidar_);
   // Predicted measurement covariance matrix for Lidar
