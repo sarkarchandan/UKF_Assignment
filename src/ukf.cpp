@@ -5,6 +5,8 @@
  */
 UKF::UKF()
 {
+  /// Initialize public member attributes
+
   // if this is false, laser measurements will be ignored (except during init)
   use_laser_ = true;
 
@@ -72,12 +74,25 @@ UKF::UKF()
     weights_[idx] = 1 / (2 * (lambda_ + n_aug_));
   }
 
-  // predicted sigma points matrix
-  // Eigen::MatrixXd Xsig_pred_;
-  // TODO: We need to initialize this matrix with augmented sigma points i.e., this
-  // matrix would be (7x15) matrix which would be initialized at first and then with
-  // each execution of the process model, this matrix would be updated. This update
-  // happens inside the Prediction method.
+  // Predicted sigma points matrix R^(5x15)
+  // Sigma points in this matrix represent the predicted state distribution by the
+  // unscented Kalman filter at each time step.
+  Xsig_pred_ = Eigen::MatrixXd(n_x_, 2 * n_aug_ + 1);
+
+  /// Initialize private member attributes
+
+  // Common measurement space dimension for Lidar and Radar.
+  n_z_radar_ = 3;
+  n_z_lidar_ = 2;
+  // Taking the greater of the two
+  n_z_common_ = n_z_lidar_ > n_z_radar_ ? n_z_lidar_ : n_z_radar_;
+  // Common translated sigma point state distribution into measurement space for
+  // Lidar and Radar
+  Z_sig_common_ = Eigen::MatrixXd(n_z_common_, 2 * n_aug_ + 1);
+  // Common translated state mean into measurement space for Lidar and Radar
+  z_pred_common_ = Eigen::VectorXd(n_z_common_);
+  // Common measurement covariance matrix for Lidar and Radar
+  S_common_ = Eigen::MatrixXd(n_z_common_, n_z_common_);
 }
 
 UKF::~UKF() {}
@@ -129,5 +144,19 @@ void UKF::UpdateRadar(MeasurementPackage meas_package)
    * covariance, P_.
    * You can also calculate the radar NIS, if desired.
    */
-  // TODO: Identical to UpdateState method
+  // Initialize and compute the cross correlation matrix
+  Eigen::MatrixXd Tc = Eigen::MatrixXd(n_x_, n_z_radar_);
+  Tc.fill(0.);
+  for (size_t idx = 0; idx < 2 * n_aug_ + 1; idx++)
+  {
+    Tc += weights_[idx] * (Xsig_pred_.col(idx) - x_) * (Z_sig_common_.col(idx) - z_pred_common_).transpose();
+  }
+  // Compute Kalman gain
+  Eigen::MatrixXd K = Tc * S_common_.inverse();
+  // Update state mean and covariance matrix frm a priori to posterior
+  // for current timestamp
+  Eigen::VectorXd z = meas_package.raw_measurements_;
+  x_ += K * (z - z_pred_common_);
+  P_ -= K * S_common_ * K.transpose();
+  // TODO: Compute NIS for tracking consistency
 }

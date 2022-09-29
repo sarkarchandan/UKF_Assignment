@@ -4,7 +4,11 @@
 #include "Eigen/Dense"
 #include "measurement_package.h"
 
-/// @brief Encapsulates the implementation of unscented Kalman filter
+/// @brief Encapsulates the implementation of unscented Kalman filter. This class
+/// maintains the public and internal states of UKF. Public state includes the predicted
+/// mean state vector, sigma points and state covariance matrix among others. Internal
+/// state includes common measurement space dimension, translated state vector, translated
+/// sigma points into measurement space and measurement covariance matrix etc.
 class UKF
 {
 public:
@@ -14,31 +18,38 @@ public:
   /// @brief Destructor
   virtual ~UKF();
 
+  /// Public methods
+
   /**
-   * ProcessMeasurement
+   * @brief Acts as an entrypoint for the sensor measurements. Before invoking
+   * appropriate update method for the sensor type it first translates the `a
+   * priori` predicted sigma points state into measurement space depending on
+   * the sensor type. This method maintains these intermediate states using
+   * internal properties.
    * @param meas_package The latest measurement data of either radar or laser
    */
   void ProcessMeasurement(MeasurementPackage meas_package);
 
   /**
-   * Prediction Predicts sigma points, the state, and the state covariance
+   * @brief Predicts sigma points, the state, and the state covariance
    * matrix
    * @param delta_t Time between k and k+1 in s
    */
   void Prediction(double delta_t);
 
   /**
-   * Updates the state and the state covariance matrix using a laser measurement
+   * @brief the state and the state covariance matrix using a laser measurement
    * @param meas_package The measurement at k+1
    */
   void UpdateLidar(MeasurementPackage meas_package);
 
   /**
-   * Updates the state and the state covariance matrix using a radar measurement
+   * @brief the state and the state covariance matrix using a radar measurement
    * @param meas_package The measurement at k+1
    */
   void UpdateRadar(MeasurementPackage meas_package);
 
+  /// Public member attributes
   // initially set to false, set to true in first call of ProcessMeasurement
   bool is_initialized_;
 
@@ -92,6 +103,29 @@ public:
 
   // Sigma point spreading parameter
   double lambda_;
+
+private:
+  /// Private member attributes
+
+  /// While defining the private member attributes we would try to avoid having
+  /// unnecessary memory footprints. For instance, while defining the dimensions
+  /// for predicted mean state vector, sigma point matrix and state covariance
+  /// matrix we can compare the Lidar and Radar measurement dimensions and take
+  /// the greater of the two. While computing these vector quantities we'd then
+  /// consider the appropriate measurement dimensions.
+
+  // Common measurement space dimension for Lidar and Radar. Taking the greater
+  // of the two.
+  int n_z_radar_;  // 3
+  int n_z_lidar_;  // 2
+  int n_z_common_; // Should be 3
+  // Common translated sigma point state distribution into measurement space for
+  // Lidar and Radar
+  Eigen::MatrixXd Z_sig_common_; // Should be R^(n_z_common_, 2 * n_aug_ + 1)
+  // Common translated state mean into measurement space for Lidar and Radar
+  Eigen::VectorXd z_pred_common_; // Should be R^n_z_common_
+  // Common measurement covariance matrix for Lidar and Radar
+  Eigen::MatrixXd S_common_; // Should be R^(n_z_common_, n_z_common_)
 };
 
 #endif // UKF_H
