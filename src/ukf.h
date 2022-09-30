@@ -122,40 +122,35 @@ private:
    */
   void augmentState(Eigen::MatrixXd *X_aug_out);
 
-  /// @brief Translates the predicted apriori sigma points to Radar
-  /// measurement space.
-  void translateStateToRadar();
+  /**
+   * @brief Translates the predicted apriori sigma points to Radar
+   * measurement space.
+   *
+   * @param n_z_radar Radar measurement space dimension
+   * @param Z_sig_out Sigma point matrix translated to Radar measurement space
+   * @param z_pred_out Predicted Radar measurement mean
+   * @param S_out Predicted Radar measurement covariance matrix
+   */
+  void translateStateToRadarSpace(
+      size_t n_z_radar,
+      Eigen::MatrixXd *Z_sig_out,
+      Eigen::VectorXd *z_pred_out,
+      Eigen::MatrixXd *S_out);
 
-  /// @brief Translates the predicted apriori sigma points to Lidar
-  /// measurement space.
-  void translateStateToLidar();
-
-  /// Private member attributes
-
-  /// While defining the private member attributes we would try to avoid having
-  /// unnecessary memory footprints. For instance, while defining the dimensions
-  /// for predicted mean state vector, sigma point matrix and state covariance
-  /// matrix we can compare the Lidar and Radar measurement dimensions and take
-  /// the greater of the two. While computing these vector quantities we'd then
-  /// consider the appropriate measurement dimensions.
-
-  // Measurement space dimensions
-  int n_z_radar_; // 3
-  int n_z_lidar_; // 2
-
-  // Sigma points matrix for measurement space for processing Radar
-  Eigen::MatrixXd Z_sig_radar_; // Should have dimension R^(n_z_radar_, 2 * n_aug_ + 1)
-  // Predicted mean measurement vector for Radar
-  Eigen::VectorXd z_pred_radar_; // Should have dimension R^(n_z_radar_)
-  // Predicted measurement covariance matrix for Radar
-  Eigen::MatrixXd S_radar_; // Should have dimension R^(n_z_radar_, n_z_radar_)
-
-  // Sigma point matrix for measurement space for processing Lidar
-  Eigen::MatrixXd Z_sig_lidar_; // Should have dimension R^(n_z_lidar_, 2 * n_aug + 1)
-  // Predicted mean measurement vector for Lidar
-  Eigen::VectorXd z_pred_lidar_; // Should have dimension R^(n_z_lidar_);
-  // Predicted measurement covariance matrix for Lidar
-  Eigen::MatrixXd S_lidar_; // Should have dimension R^(n_z_lidar_, n_z_lidar_)
+  /**
+   * @brief Translates the predicted apriori sigma points to Lidar
+   * measurement space.
+   *
+   * @param n_z_lidar Lidar measurement space dimension
+   * @param Z_sig_out Sigma point matrix translated to Lidar measurement space
+   * @param z_pred_out Predicted Lidar measurement mean
+   * @param S_out Predicted Lidar measurement covariance matrix
+   */
+  void translateStateToLidarSpace(
+      size_t n_z_lidar,
+      Eigen::MatrixXd *Z_sig_out,
+      Eigen::VectorXd *z_pred_out,
+      Eigen::MatrixXd *S_out);
 };
 
 #endif // UKF_H

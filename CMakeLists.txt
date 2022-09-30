@@ -7,7 +7,7 @@ endif()
 project(playback)
 
 find_package(Eigen3 REQUIRED)
-find_package(PCL 1.2 REQUIRED)
+find_package(PCL 1.12 REQUIRED)
 
 include_directories(${PCL_INCLUDE_DIRS})
 link_directories(${PCL_LIBRARY_DIRS})
