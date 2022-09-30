@@ -321,6 +321,7 @@ void UKF::UpdateLidar(MeasurementPackage meas_package)
   // Update state mean and covariance matrix from apriori to posterior
   // for current timestamp
   Eigen::VectorXd z = meas_package.raw_measurements_.head(n_z_lidar);
+  Eigen::VectorXd z_diff = z - z_pred_lidar;
   x_ += K * (z - z_pred_lidar);
   P_ -= K * S_lidar * K.transpose();
   /// TODO: Compute NIS for tracking consistency for Lidar
@@ -351,8 +352,8 @@ void UKF::UpdateRadar(MeasurementPackage meas_package)
     double pos_y = predicted_sigma[1];
     double velocity = predicted_sigma[2];
     double yaw_angle = predicted_sigma[3];
-    double yaw_rate = predicted_sigma[4];
     // Translate CTRV state vector components to Radar measurement components
+    // Measurement model
     double radial_distance = std::sqrt(std::pow(pos_x, 2.) + std::pow(pos_y, 2.));
     double radial_angle = std::atan(pos_y / pos_x);
     double radial_velocity = ((pos_x * std::cos(yaw_angle) * velocity) + (pos_y * std::sin(yaw_angle) * velocity)) / radial_distance;
@@ -378,6 +379,7 @@ void UKF::UpdateRadar(MeasurementPackage meas_package)
     {
       z_diff[1] += 2 * M_PI;
     }
+    // Update measurement covariance matrix
     S_radar += (weights_[idx] * z_diff * z_diff.transpose());
     Eigen::VectorXd x_diff = Xsig_pred_.col(idx) - x_;
     // Normalize yaw angle to lie in [-180, 180]
@@ -403,7 +405,17 @@ void UKF::UpdateRadar(MeasurementPackage meas_package)
   // Update state mean and covariance matrix from apriori to posterior
   // for current timestamp
   Eigen::VectorXd z = meas_package.raw_measurements_;
-  x_ += K * (z - z_pred_radar);
+  Eigen::VectorXd z_diff = z - z_pred_radar;
+  // Normalize radial angle to lie in [-180, 180]
+  while (z_diff[1] > M_PI)
+  {
+    z_diff[1] -= 2 * M_PI;
+  }
+  while (z_diff[1] < -M_PI)
+  {
+    z_diff[1] += 2 * M_PI;
+  }
+  x_ += K * z_diff;
   P_ -= K * S_radar * K.transpose();
   /// TODO: Compute NIS for tracking consistency for Radar
 }
