@@ -100,11 +100,11 @@ void UKF::augmentState(Eigen::MatrixXd *X_aug_out)
   x_aug.head(n_x_) = x_;
 
   // Create augmented covariance matrix
-  Eigen::Matrix2d Q;
+  Eigen::MatrixXd Q = Eigen::MatrixXd(2, 2);
   // Noises are provided as standard deviation. We need to square them to
   // derive variance
-  Q << std::pow(std_a_, 2.0), 0,
-      0, std::pow(std_yawdd_, 2.0);
+  Q << std::pow(std_a_, 2.), 0.,
+      0., std::pow(std_yawdd_, 2.);
   P_aug.block(0, 0, n_x_, n_x_) = P_;
   P_aug.block(n_x_, n_x_, 2, 2) = Q;
 
@@ -116,112 +116,6 @@ void UKF::augmentState(Eigen::MatrixXd *X_aug_out)
   Xsig_aug.block(0, 1, n_aug_, n_aug_) = (std::sqrt(lambda_ + n_aug_) * A).colwise() + x_aug;
   Xsig_aug.block(0, n_aug_ + 1, n_aug_, n_aug_) = (-std::sqrt(lambda_ + n_aug_) * A).colwise() + x_aug;
   *X_aug_out = Xsig_aug;
-}
-
-void UKF::translateStateToRadarSpace(
-    size_t n_z_radar,
-    Eigen::MatrixXd *Z_sig_out,
-    Eigen::VectorXd *z_pred_out,
-    Eigen::MatrixXd *S_out)
-{
-  // Sigma points matrix for measurement space
-  Eigen::MatrixXd Z_sig_radar_ = Eigen::MatrixXd::Zero(n_z_radar, 2 * n_aug_ + 1);
-  // Predicted mean measurement vector
-  Eigen::VectorXd z_pred_radar_ = Eigen::VectorXd::Zero(n_z_radar);
-  // Predicted measurement covariance matrix
-  Eigen::MatrixXd S_radar_ = Eigen::MatrixXd::Zero(n_z_radar, n_z_radar);
-
-  // Transform sigma points into measurement space
-  for (size_t idx = 0; idx < 2 * n_aug_ + 1; idx++)
-  {
-    Eigen::VectorXd predicted_sigma = Xsig_pred_.col(idx);
-    double pos_x = predicted_sigma[0];
-    double pos_y = predicted_sigma[1];
-    double velocity = predicted_sigma[2];
-    double yaw_angle = predicted_sigma[3];
-    double yaw_rate = predicted_sigma[4];
-    // Translate CTRV state vector components to Radar measurement components
-    double radial_distance = std::sqrt(std::pow(pos_x, 2.) + std::pow(pos_y, 2.));
-    double radial_angle = std::atan(pos_y / pos_x);
-    double radial_velocity = ((pos_x * std::cos(yaw_angle) * velocity) + (pos_y * std::sin(yaw_angle) * velocity)) / radial_distance;
-    Eigen::VectorXd meas(n_z_radar);
-    meas << radial_distance, radial_angle, radial_velocity;
-    Z_sig_radar_.col(idx) = meas;
-  }
-
-  // Compute translated measurement mean
-  for (size_t idx = 0; idx < 2 * n_aug_ + 1; idx++)
-  {
-    z_pred_radar_ += weights_[idx] * Z_sig_radar_.col(idx);
-  }
-
-  // Compute translated measurement covariance matrix S
-  Eigen::MatrixXd R = Eigen::MatrixXd(n_z_radar, n_z_radar);
-  R.fill(0.);
-  R(0, 0) = std::pow(std_radr_, 2.);
-  R(1, 1) = std::pow(std_radphi_, 2.);
-  R(2, 2) = std::pow(std_radrd_, 2.);
-  for (size_t idx = 0; idx < 2 * n_aug_ + 1; idx++)
-  {
-    Eigen::VectorXd z_diff = Z_sig_radar_.col(idx) - z_pred_radar_;
-    // Normalize radial angle to lie in [-180, 180]
-    while (z_diff[1] > M_PI)
-    {
-      z_diff[1] -= 2 * M_PI;
-    }
-    while (z_diff[1] < -M_PI)
-    {
-      z_diff[1] += 2 * M_PI;
-    }
-    S_radar_ += (weights_[idx] * z_diff * z_diff.transpose());
-  }
-  S_radar_ += R;
-
-  *Z_sig_out = Z_sig_radar_;
-  *z_pred_out = z_pred_radar_;
-  *S_out = S_radar_;
-}
-
-void UKF::translateStateToLidarSpace(
-    size_t n_z_lidar,
-    Eigen::MatrixXd *Z_sig_out,
-    Eigen::VectorXd *z_pred_out,
-    Eigen::MatrixXd *S_out)
-{
-  // Sigma point matrix for measurement space for processing Lidar
-  Eigen::MatrixXd Z_sig_lidar_ = Eigen::MatrixXd::Zero(n_z_lidar, 2 * n_aug_ + 1);
-  // Predicted mean measurement vector for Lidar
-  Eigen::VectorXd z_pred_lidar_ = Eigen::VectorXd::Zero(n_z_lidar);
-  // Predicted measurement covariance matrix for Lidar
-  Eigen::MatrixXd S_lidar_ = Eigen::MatrixXd::Zero(n_z_lidar, n_z_lidar);
-
-  // Transform sigma points into measurement space
-  for (size_t idx = 0; idx < 2 * n_aug_ + 1; idx++)
-  {
-    Z_sig_lidar_.col(idx) = Xsig_pred_.col(idx).head(n_z_lidar);
-  }
-
-  // Compute translated measurement mean
-  for (size_t idx = 0; idx < 2 * n_aug_ + 1; idx++)
-  {
-    z_pred_lidar_ += weights_[idx] * Z_sig_lidar_.col(idx);
-  }
-
-  // Compute translated measurement covariance matrix S
-  Eigen::MatrixXd R = Eigen::MatrixXd(n_z_lidar, n_z_lidar);
-  R.fill(0.);
-  R(0, 0) = std::pow(std_laspx_, 2.);
-  R(1, 1) = std::pow(std_laspy_, 2.);
-  for (size_t idx = 0; idx < 2 * n_aug_ + 1; idx++)
-  {
-    Eigen::VectorXd z_diff = Z_sig_lidar_.col(idx) - z_pred_lidar_;
-    S_lidar_ += (weights_[idx] * z_diff * z_diff.transpose());
-  }
-  S_lidar_ += R;
-
-  *Z_sig_out = Z_sig_lidar_;
-  *z_pred_out = z_pred_lidar_;
-  *S_out = S_lidar_;
 }
 
 void UKF::ProcessMeasurement(MeasurementPackage meas_package)
@@ -380,24 +274,55 @@ void UKF::UpdateLidar(MeasurementPackage meas_package)
    * You can also calculate the lidar NIS, if desired.
    */
   size_t n_z_lidar = 2;
-  Eigen::MatrixXd Z_sig_out = Eigen::MatrixXd(n_z_lidar, 2 * n_aug_ + 1);
-  Eigen::VectorXd z_pred_out = Eigen::VectorXd(n_z_lidar);
-  Eigen::MatrixXd S_out = Eigen::MatrixXd(n_z_lidar, n_z_lidar);
-  // Translate predicted state, covariance and sigma points to measurement space
-  this->translateStateToLidarSpace(n_z_lidar, &Z_sig_out, &z_pred_out, &S_out);
+  // Sigma point matrix for measurement space for processing Lidar
+  Eigen::MatrixXd Z_sig_lidar = Eigen::MatrixXd::Zero(n_z_lidar, 2 * n_aug_ + 1);
+  // Predicted mean measurement vector for Lidar
+  Eigen::VectorXd z_pred_lidar = Eigen::VectorXd::Zero(n_z_lidar);
+  // Predicted measurement covariance matrix for Lidar
+  Eigen::MatrixXd S_lidar = Eigen::MatrixXd::Zero(n_z_lidar, n_z_lidar);
   // Define cross correlation matrix
   Eigen::MatrixXd Tc = Eigen::MatrixXd::Zero(n_x_, n_z_lidar);
+  // Transform sigma points into measurement space
   for (size_t idx = 0; idx < 2 * n_aug_ + 1; idx++)
   {
-    Tc += weights_[idx] * (Xsig_pred_.col(idx) - x_) * (Z_sig_out.col(idx) - z_pred_out).transpose();
+    Z_sig_lidar.col(idx) = Xsig_pred_.col(idx).head(n_z_lidar);
   }
+  // Compute translated measurement mean
+  for (size_t idx = 0; idx < 2 * n_aug_ + 1; idx++)
+  {
+    z_pred_lidar += weights_[idx] * Z_sig_lidar.col(idx);
+  }
+  // Compute cross correlation matrix
+  for (size_t idx = 0; idx < 2 * n_aug_ + 1; idx++)
+  {
+    Eigen::VectorXd z_diff = Z_sig_lidar.col(idx) - z_pred_lidar;
+    // In lidar measurement space we don't have any angle measure to
+    // normalize
+    S_lidar += (weights_[idx] * z_diff * z_diff.transpose());
+    Eigen::VectorXd x_diff = Xsig_pred_.col(idx) - x_;
+    // Normalize yaw angle to lie in [-180, 180]
+    while (x_diff[3] > M_PI)
+    {
+      x_diff[3] -= 2 * M_PI;
+    }
+    while (x_diff[3] < -M_PI)
+    {
+      x_diff[3] += 2 * M_PI;
+    }
+    Tc += weights_[idx] * x_diff * z_diff.transpose();
+  }
+  // Compute translated measurement covariance matrix S
+  Eigen::MatrixXd R = Eigen::MatrixXd::Zero(n_z_lidar, n_z_lidar);
+  R(0, 0) = std::pow(std_laspx_, 2.);
+  R(1, 1) = std::pow(std_laspy_, 2.);
+  S_lidar += R;
   // Compute Kalman gain
-  Eigen::MatrixXd K = Tc * S_out.inverse();
+  Eigen::MatrixXd K = Tc * S_lidar.inverse();
   // Update state mean and covariance matrix from apriori to posterior
   // for current timestamp
   Eigen::VectorXd z = meas_package.raw_measurements_.head(n_z_lidar);
-  x_ += K * (z - z_pred_out);
-  P_ -= K * S_out * K.transpose();
+  x_ += K * (z - z_pred_lidar);
+  P_ -= K * S_lidar * K.transpose();
   /// TODO: Compute NIS for tracking consistency for Lidar
 }
 
@@ -410,23 +335,75 @@ void UKF::UpdateRadar(MeasurementPackage meas_package)
    * You can also calculate the radar NIS, if desired.
    */
   size_t n_z_radar = 3;
-  Eigen::MatrixXd Z_sig_out = Eigen::MatrixXd(n_z_radar, 2 * n_aug_ + 1);
-  Eigen::VectorXd z_pred_out = Eigen::VectorXd(n_z_radar);
-  Eigen::MatrixXd S_out = Eigen::MatrixXd(n_z_radar, n_z_radar);
-  // Translate predicted state, covariance and sigma points to measurement space
-  this->translateStateToRadarSpace(n_z_radar, &Z_sig_out, &z_pred_out, &S_out);
+  // Sigma points matrix for measurement space
+  Eigen::MatrixXd Z_sig_radar = Eigen::MatrixXd::Zero(n_z_radar, 2 * n_aug_ + 1);
+  // Predicted mean measurement vector
+  Eigen::VectorXd z_pred_radar = Eigen::VectorXd::Zero(n_z_radar);
+  // Predicted measurement covariance matrix
+  Eigen::MatrixXd S_radar = Eigen::MatrixXd::Zero(n_z_radar, n_z_radar);
   // Define cross correlation matrix
   Eigen::MatrixXd Tc = Eigen::MatrixXd::Zero(n_x_, n_z_radar);
+  // Transform sigma points into measurement space
   for (size_t idx = 0; idx < 2 * n_aug_ + 1; idx++)
   {
-    Tc += weights_[idx] * (Xsig_pred_.col(idx) - x_) * (Z_sig_out.col(idx) - z_pred_out).transpose();
+    Eigen::VectorXd predicted_sigma = Xsig_pred_.col(idx);
+    double pos_x = predicted_sigma[0];
+    double pos_y = predicted_sigma[1];
+    double velocity = predicted_sigma[2];
+    double yaw_angle = predicted_sigma[3];
+    double yaw_rate = predicted_sigma[4];
+    // Translate CTRV state vector components to Radar measurement components
+    double radial_distance = std::sqrt(std::pow(pos_x, 2.) + std::pow(pos_y, 2.));
+    double radial_angle = std::atan(pos_y / pos_x);
+    double radial_velocity = ((pos_x * std::cos(yaw_angle) * velocity) + (pos_y * std::sin(yaw_angle) * velocity)) / radial_distance;
+    Eigen::VectorXd meas(n_z_radar);
+    meas << radial_distance, radial_angle, radial_velocity;
+    Z_sig_radar.col(idx) = meas;
   }
+  // Compute translated measurement mean
+  for (size_t idx = 0; idx < 2 * n_aug_ + 1; idx++)
+  {
+    z_pred_radar += weights_[idx] * Z_sig_radar.col(idx);
+  }
+  // Compute cross correlation matrix
+  for (size_t idx = 0; idx < 2 * n_aug_ + 1; idx++)
+  {
+    Eigen::VectorXd z_diff = Z_sig_radar.col(idx) - z_pred_radar;
+    // Normalize radial angle to lie in [-180, 180]
+    while (z_diff[1] > M_PI)
+    {
+      z_diff[1] -= 2 * M_PI;
+    }
+    while (z_diff[1] < -M_PI)
+    {
+      z_diff[1] += 2 * M_PI;
+    }
+    S_radar += (weights_[idx] * z_diff * z_diff.transpose());
+    Eigen::VectorXd x_diff = Xsig_pred_.col(idx) - x_;
+    // Normalize yaw angle to lie in [-180, 180]
+    while (x_diff[3] > M_PI)
+    {
+      x_diff[3] -= 2 * M_PI;
+    }
+    while (x_diff[3] < -M_PI)
+    {
+      x_diff[3] += 2 * M_PI;
+    }
+    Tc += weights_[idx] * x_diff * z_diff.transpose();
+  }
+  // Compute translated measurement covariance matrix S
+  Eigen::MatrixXd R = Eigen::MatrixXd(n_z_radar, n_z_radar);
+  R.fill(0.);
+  R(0, 0) = std::pow(std_radr_, 2.);
+  R(1, 1) = std::pow(std_radphi_, 2.);
+  R(2, 2) = std::pow(std_radrd_, 2.);
+  S_radar += R;
   // Compute Kalman gain
-  Eigen::MatrixXd K = Tc * S_out.inverse();
+  Eigen::MatrixXd K = Tc * S_radar.inverse();
   // Update state mean and covariance matrix from apriori to posterior
   // for current timestamp
   Eigen::VectorXd z = meas_package.raw_measurements_;
-  x_ += K * (z - z_pred_out);
-  P_ -= K * S_out * K.transpose();
+  x_ += K * (z - z_pred_radar);
+  P_ -= K * S_radar * K.transpose();
   /// TODO: Compute NIS for tracking consistency for Radar
 }

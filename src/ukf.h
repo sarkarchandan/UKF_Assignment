@@ -121,36 +121,6 @@ private:
    * Expected dimension R^(n_aug_, 2 * n_aug_ + 1)
    */
   void augmentState(Eigen::MatrixXd *X_aug_out);
-
-  /**
-   * @brief Translates the predicted apriori sigma points to Radar
-   * measurement space.
-   *
-   * @param n_z_radar Radar measurement space dimension
-   * @param Z_sig_out Sigma point matrix translated to Radar measurement space
-   * @param z_pred_out Predicted Radar measurement mean
-   * @param S_out Predicted Radar measurement covariance matrix
-   */
-  void translateStateToRadarSpace(
-      size_t n_z_radar,
-      Eigen::MatrixXd *Z_sig_out,
-      Eigen::VectorXd *z_pred_out,
-      Eigen::MatrixXd *S_out);
-
-  /**
-   * @brief Translates the predicted apriori sigma points to Lidar
-   * measurement space.
-   *
-   * @param n_z_lidar Lidar measurement space dimension
-   * @param Z_sig_out Sigma point matrix translated to Lidar measurement space
-   * @param z_pred_out Predicted Lidar measurement mean
-   * @param S_out Predicted Lidar measurement covariance matrix
-   */
-  void translateStateToLidarSpace(
-      size_t n_z_lidar,
-      Eigen::MatrixXd *Z_sig_out,
-      Eigen::VectorXd *z_pred_out,
-      Eigen::MatrixXd *S_out);
 };
 
 #endif // UKF_H
