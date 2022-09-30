@@ -80,6 +80,12 @@ UKF::UKF()
   // Sigma points in this matrix represent the predicted state distribution by the
   // unscented Kalman filter at each time step. We initialize this as 0-value matrix.
   Xsig_pred_ = Eigen::MatrixXd(n_x_, 2 * n_aug_ + 1);
+
+  // Normalized innovation score for Lidar
+  nis_lidar_ = 0.;
+
+  // Normalized innovation score for Radar
+  nis_radar_ = 0.;
 }
 
 UKF::~UKF() {}
@@ -322,9 +328,10 @@ void UKF::UpdateLidar(MeasurementPackage meas_package)
   // for current timestamp
   Eigen::VectorXd z = meas_package.raw_measurements_.head(n_z_lidar);
   Eigen::VectorXd z_diff = z - z_pred_lidar;
-  x_ += K * (z - z_pred_lidar);
+  x_ += K * z_diff;
   P_ -= K * S_lidar * K.transpose();
-  /// TODO: Compute NIS for tracking consistency for Lidar
+  // Compute normalized innovation score for Lidar
+  nis_lidar_ = z_diff.transpose() * S_lidar.inverse() * z_diff;
 }
 
 void UKF::UpdateRadar(MeasurementPackage meas_package)
@@ -347,11 +354,10 @@ void UKF::UpdateRadar(MeasurementPackage meas_package)
   // Transform sigma points into measurement space
   for (size_t idx = 0; idx < 2 * n_aug_ + 1; idx++)
   {
-    Eigen::VectorXd predicted_sigma = Xsig_pred_.col(idx);
-    double pos_x = predicted_sigma[0];
-    double pos_y = predicted_sigma[1];
-    double velocity = predicted_sigma[2];
-    double yaw_angle = predicted_sigma[3];
+    double pos_x = Xsig_pred_(0, idx);
+    double pos_y = Xsig_pred_(1, idx);
+    double velocity = Xsig_pred_(2, idx);
+    double yaw_angle = Xsig_pred_(3, idx);
     // Translate CTRV state vector components to Radar measurement components
     // Measurement model
     double radial_distance = std::sqrt(std::pow(pos_x, 2.) + std::pow(pos_y, 2.));
@@ -417,5 +423,5 @@ void UKF::UpdateRadar(MeasurementPackage meas_package)
   }
   x_ += K * z_diff;
   P_ -= K * S_radar * K.transpose();
-  /// TODO: Compute NIS for tracking consistency for Radar
+  nis_radar_ = z_diff.transpose() * S_radar.inverse() * z_diff;
 }

@@ -108,6 +108,12 @@ public:
   // Sigma point spreading parameter
   double lambda_;
 
+  // Normalized innovation score for Lidar
+  double nis_lidar_;
+
+  // Normalized innovation score for Radar
+  double nis_radar_;
+
 private:
   /// Private member functions
 
