@@ -33,10 +33,10 @@ UKF::UKF()
   P_ = Eigen::MatrixXd::Identity(n_x_, n_x_);
 
   // Process noise standard deviation longitudinal acceleration in m/s^2
-  std_a_ = 1; // Starting value for longitudinal acceleration noise
+  std_a_ = 2.; // Starting value for longitudinal acceleration noise
 
   // Process noise standard deviation yaw acceleration in rad/s^2
-  std_yawdd_ = 0.8; // Starting value for yaw acceleration noise
+  std_yawdd_ = 1.; // Starting value for yaw acceleration noise
 
   /**
    * DO NOT MODIFY measurement noise values below.
