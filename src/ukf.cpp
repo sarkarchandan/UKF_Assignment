@@ -90,7 +90,7 @@ UKF::UKF()
 
 UKF::~UKF() {}
 
-void UKF::augmentState(Eigen::MatrixXd *X_aug_out)
+void UKF::augmentState(Eigen::MatrixXd *X_aug_out) const
 {
   // Create augmented mean vector. This would automatically
   // incorporate that noise components have 0-mean
@@ -124,7 +124,7 @@ void UKF::augmentState(Eigen::MatrixXd *X_aug_out)
   *X_aug_out = Xsig_aug;
 }
 
-void UKF::ProcessMeasurement(MeasurementPackage meas_package)
+void UKF::ProcessMeasurement(MeasurementPackage const &meas_package)
 {
   /**
    * TODO: Complete this function! Make sure you switch between lidar and radar
@@ -175,7 +175,6 @@ void UKF::ProcessMeasurement(MeasurementPackage meas_package)
   // With program control reaching here we can assume that the UKF state vector is
   // initialized with the earlier invocation and we can then process the measurements
   // as per the sensor type.
-
   // Compute elapsed time delta since last measurement and update current timestamp
   double delta_t = static_cast<double>((meas_package.timestamp_ - timestamp_mis_) / 1000000.0);
   timestamp_mis_ = meas_package.timestamp_;
@@ -186,11 +185,11 @@ void UKF::ProcessMeasurement(MeasurementPackage meas_package)
   // Update phase
   if (use_laser_ && meas_package.sensor_type_ == MeasurementPackage::LASER)
   {
-    this->UpdateLidar(meas_package);
+    this->updateLidar(meas_package);
   }
   else if (use_radar_ && meas_package.sensor_type_ == MeasurementPackage::RADAR)
   {
-    this->UpdateRadar(meas_package);
+    this->updateRadar(meas_package);
   }
 }
 
@@ -271,7 +270,11 @@ void UKF::Prediction(double delta_t)
   }
 }
 
-void UKF::UpdateLidar(MeasurementPackage meas_package)
+void UKF::updateLidarExperimental(MeasurementPackage const &meas_package)
+{
+}
+
+void UKF::updateLidar(MeasurementPackage const &meas_package)
 {
   /**
    * TODO: Complete this function! Use lidar data to update the belief
@@ -334,7 +337,7 @@ void UKF::UpdateLidar(MeasurementPackage meas_package)
   nis_lidar_ = z_diff.transpose() * S_lidar.inverse() * z_diff;
 }
 
-void UKF::UpdateRadar(MeasurementPackage meas_package)
+void UKF::updateRadar(MeasurementPackage const &meas_package)
 {
   /**
    * TODO: Complete this function! Use radar data to update the belief

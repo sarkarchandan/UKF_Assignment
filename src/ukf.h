@@ -23,34 +23,26 @@ public:
   /// Public member functions
 
   /**
-   * @brief Acts as an entrypoint for the sensor measurements. Before invoking
-   * appropriate update method for the sensor type it first translates the `a
-   * priori` predicted sigma points state into measurement space depending on
-   * the sensor type. This method maintains these intermediate states using
-   * internal properties.
+   * @brief Acts as an entrypoint for the sensor measurements. At the start of
+   * the unscented Kalman filter process cycle we initialize the UKF state in
+   * this method. For the subsequent process cycles this method delegates the
+   * derivation of posterior state mean and covariance matrix to internal update
+   * methods depending on the sensor type.
+   *
    * @param meas_package The latest measurement data of either radar or laser
    */
-  void ProcessMeasurement(MeasurementPackage meas_package);
+  void ProcessMeasurement(MeasurementPackage const &meas_package);
 
   /**
    * @brief Predicts sigma points, the state, and the state covariance
-   * matrix. This method executes the process model to derive the `a priori`
-   * state.
+   * matrix. This method executes the process model to derive the apriori
+   * state. This method predicts the state mean and covariance for time
+   * step k+1 while the last known measurement is from previous time step
+   * k.
+   *
    * @param delta_t Time between k and k+1 in s
    */
   void Prediction(double delta_t);
-
-  /**
-   * @brief the state and the state covariance matrix using a laser measurement
-   * @param meas_package The measurement at k+1
-   */
-  void UpdateLidar(MeasurementPackage meas_package);
-
-  /**
-   * @brief the state and the state covariance matrix using a radar measurement
-   * @param meas_package The measurement at k+1
-   */
-  void UpdateRadar(MeasurementPackage meas_package);
 
   /// Public member attributes
 
@@ -119,14 +111,47 @@ private:
 
   /**
    * @brief Executes the augmentation technique in order to incorporate the
-   * longitudinal and yaw acceleration noise components into state vector,
-   * state covariance matrix and sigma points. This method is meant to be
-   * called by Prediction method before computing `a priori` state.
+   * longitudinal and yaw acceleration noise components into state mean and
+   * covariance matrix and sigma points. This method is meant to be called
+   * by Prediction method before computing apriori state.
    *
    * @param X_aug_out Augmented sigma point matrix from the current state.
    * Expected dimension R^(n_aug_, 2 * n_aug_ + 1)
    */
-  void augmentState(Eigen::MatrixXd *X_aug_out);
+  void augmentState(Eigen::MatrixXd *X_aug_out) const;
+
+  /**
+   * @brief Updates the state and the state covariance matrix using a Lidar
+   * measurement. This method derives the posterior state and covariance
+   * matrix after translating the apriori state to measurement space for
+   * Lidar and processing the measurement for time step k+1.
+   *
+   * @param meas_package The measurement at k+1
+   */
+  void updateLidar(MeasurementPackage const &meas_package);
+
+  /**
+   * @brief Updates the state and the state covariance matrix using a Lidar
+   * measurement. This method derives the posterior state and covariance
+   * matrix after translating the apriori state to measurement space for
+   * Lidar and processing the measurement for time step k+1. Unlike the
+   * updateLidar method this method uses a straight forward technique to
+   * accomplish the same. This is implemented as experimental alternative
+   * to compare against conventional UKF technique.
+   *
+   * @param meas_package The measurement at k+1
+   */
+  void updateLidarExperimental(MeasurementPackage const &meas_package);
+
+  /**
+   * @brief Upates the state and the state covariance matrix using a radar
+   * measurement. This method derives the posterior state and covariance
+   * matrix after translating the apriori state to measurement space for
+   * Radar and processing the measurement for time step k+1.
+   *
+   * @param meas_package The measurement at k+1
+   */
+  void updateRadar(MeasurementPackage const &meas_package);
 };
 
 #endif // UKF_H
