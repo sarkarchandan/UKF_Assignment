@@ -1,4 +1,10 @@
+#include <algorithm>
+
 #include "highway.h"
+#include "matplotlibcpp.h"
+
+// Use shorter alias for matplotlib-cpp
+namespace plt = matplotlibcpp;
 
 int main(int argc, char **argv)
 {
@@ -21,6 +27,10 @@ int main(int argc, char **argv)
 	int time_us = 0;
 	double egoVelocity = 25;
 
+	// NIS Metric preparation begin
+	highway.InitNIS(frame_per_sec * sec_interval);
+	// NIS Metric preparation end
+
 	// Define visualization loop
 	while (frame_count < (frame_per_sec * sec_interval))
 	{
@@ -32,4 +42,17 @@ int main(int argc, char **argv)
 		frame_count++;
 		time_us = 1000000 * frame_count / frame_per_sec;
 	}
+
+	// NIS Metric preparation begin
+	plt::xkcd();
+	const double chi_square_95 = 7.815;
+	std::vector<double> critical_line(frame_per_sec * sec_interval, chi_square_95);
+	plt::figure_size(1280, 720);
+	plt::named_plot("95% Line", critical_line, "r--");
+	plt::named_plot("Radar NIS", highway.traffic_nis_radar);
+	plt::named_plot("Lidar NIS", highway.traffic_nis_lidar);
+	plt::legend();
+	plt::save("./NIS_UKF.png");
+	plt::show();
+	// NIS Metric preparation end
 }

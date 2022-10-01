@@ -1,3 +1,5 @@
+#include <vector>
+
 #include "render/render.h"
 #include "sensors/lidar.h"
 #include "tools.h"
@@ -8,6 +10,7 @@
 /// the same for each unit time step.
 class Highway
 {
+private:
 public:
 	std::vector<Car> traffic; /*Simulated car traffics on the highway*/
 	Car egoCar;				  /*Simulated car with the sensors*/
@@ -30,11 +33,16 @@ public:
 	int projectedSteps = 0;
 	// --------------------------------
 
+	// NIS Metric preparation begin
+	std::vector<double> traffic_nis_lidar;
+	std::vector<double> traffic_nis_radar;
+	size_t trackCount_;
+	// NIS Metric preparation end
+
 	/// @brief Constructor for Highway
 	/// @param viewer PCL visualizer by pointer reference
 	Highway(pcl::visualization::PCLVisualizer::Ptr &viewer)
 	{
-
 		tools = Tools();
 		// Instantiate the main car with sensors
 		egoCar = Car(Vect3(0, 0, 0), Vect3(4, 2, 2), Color(0, 1, 0), 0, 0, 2, "egoCar");
@@ -106,6 +114,22 @@ public:
 	}
 
 	/**
+	 * @brief Initializes the data collection for NIS metric
+	 *
+	 * @param numReading Number of reading i.e., the number of
+	 * potential time steps
+	 */
+	void InitNIS(size_t numReading)
+	{
+		// NIS Metric preparation begin
+		trackCount_ = std::count_if(trackCars.begin(), trackCars.end(), [](bool flag)
+									{ return flag == true; });
+		traffic_nis_lidar.reserve(numReading);
+		traffic_nis_radar.reserve(numReading);
+		// NIS Metric preparation end
+	}
+
+	/**
 	 * @brief Control the behavior of the traffic elements on the highway for
 	 * unit time step.
 	 *
@@ -126,6 +150,10 @@ public:
 		// Render highway environment with poles
 		renderHighway(egoVelocity * timestamp / 1e6, viewer);
 		egoCar.render(viewer);
+		// NIS Metric preparation begin
+		Eigen::VectorXd nis_scores_lidar = Eigen::VectorXd(trackCount_);
+		Eigen::VectorXd nis_scores_radar = Eigen::VectorXd(trackCount_);
+		// NIS Metric preparation begin
 		// For each car to be tracked
 		for (int i = 0; i < traffic.size(); i++)
 		{
@@ -151,8 +179,16 @@ public:
 				double v2 = sin(yaw) * v;
 				estimate << traffic[i].ukf.x_[0], traffic[i].ukf.x_[1], v1, v2;
 				tools.estimations.push_back(estimate);
+				// NIS Metric preparation begin
+				nis_scores_lidar[i] = traffic[i].ukf.nis_lidar_;
+				nis_scores_radar[i] = traffic[i].ukf.nis_radar_;
+				// NIS Metric preparation end
 			}
 		}
+		// NIS Metric preparation begin
+		traffic_nis_lidar.push_back(nis_scores_lidar.mean());
+		traffic_nis_radar.push_back(nis_scores_radar.mean());
+		// NIS Metric preparation end
 		viewer->addText("Accuracy - RMSE:", 30, 300, 20, 1, 1, 1, "rmse");
 		Eigen::VectorXd rmse = tools.CalculateRMSE(tools.estimations, tools.ground_truth);
 		viewer->addText(" X: " + std::to_string(rmse[0]), 30, 275, 20, 1, 1, 1, "rmse_x");
