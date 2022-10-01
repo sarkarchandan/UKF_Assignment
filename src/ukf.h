@@ -44,7 +44,7 @@ public:
    */
   void Prediction(double delta_t);
 
-  /// Public member attributes
+  /// Public member properties
 
   // Initially set to false, set to true in first call of ProcessMeasurement
   bool is_initialized_;
@@ -134,10 +134,15 @@ private:
    * @brief Updates the state and the state covariance matrix using a Lidar
    * measurement. This method derives the posterior state and covariance
    * matrix after translating the apriori state to measurement space for
-   * Lidar and processing the measurement for time step k+1. Unlike the
-   * updateLidar method this method uses a straight forward technique to
-   * accomplish the same. This is implemented as experimental alternative
-   * to compare against conventional UKF technique.
+   * Lidar and processing the measurement for time step k+1.
+   *
+   * NOTE: This is an experimental alternative of the UKF way of
+   * dealing with the Lidar measurements. In this implementation
+   * we don't make use of sigma points and it uses linear transformation
+   * to derive posterior state. That means it is expected that without
+   * correct tuning this method of deriving the posterior state may
+   * struggle to estimate nonlinear motions components e.g., yaw angle,
+   * yaw rate accurately.
    *
    * @param meas_package The measurement at k+1
    */

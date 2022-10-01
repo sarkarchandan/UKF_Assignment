@@ -22,7 +22,7 @@ UKF::UKF()
   // Augmented state dimension
   n_aug_ = 7;
 
-  // initial state vector
+  // Initial state vector
   // NOTE: As a starting point we initialized as random. When the first Lidar
   // measurement comes, we'd set the position_x and position_y. Until then we
   // would consider the UKF state as uninitialized.
@@ -33,10 +33,10 @@ UKF::UKF()
   P_ = Eigen::MatrixXd::Identity(n_x_, n_x_);
 
   // Process noise standard deviation longitudinal acceleration in m/s^2
-  std_a_ = 1.; // Starting value for longitudinal acceleration noise
+  std_a_ = 2.; // Starting value for longitudinal acceleration noise
 
   // Process noise standard deviation yaw acceleration in rad/s^2
-  std_yawdd_ = 0.8; // Starting value for yaw acceleration noise
+  std_yawdd_ = 1.; // Starting value for yaw acceleration noise
 
   /**
    * DO NOT MODIFY measurement noise values below.
@@ -190,6 +190,17 @@ void UKF::ProcessMeasurement(MeasurementPackage const &meas_package)
   else if (use_radar_ && meas_package.sensor_type_ == MeasurementPackage::RADAR)
   {
     this->updateRadar(meas_package);
+    /*
+     * NOTE: Following is an experimental alternative of the UKF way of
+     * dealing with the Lidar measurements. In this implementation
+     * we don't make use of sigma points and it uses linear transformation
+     * to derive posterior state. That means it is expected that without
+     * correct tuning this method of deriving the posterior state may
+     * struggle to estimate nonlinear motions components e.g., yaw angle,
+     * yaw rate accurately. We added this implementation just as an experiment
+     * and kept it deactivated in the final version of UKF.
+     */
+    // this->updateLidarExperimental(meas_package);
   }
 }
 
@@ -272,6 +283,32 @@ void UKF::Prediction(double delta_t)
 
 void UKF::updateLidarExperimental(MeasurementPackage const &meas_package)
 {
+  // Define translation matrix H to translate the state vector to Lidar
+  // measurement space
+  size_t n_z_lidar = 2;
+  Eigen::MatrixXd H = Eigen::MatrixXd::Zero(n_z_lidar, n_x_);
+  H(0, 0) = 1.;
+  H(1, 1) = 1.;
+  // Compute translated measurement covariance matrix S
+  Eigen::MatrixXd R = Eigen::MatrixXd::Zero(n_z_lidar, n_z_lidar);
+  R(0, 0) = std::pow(std_laspx_, 2.);
+  R(1, 1) = std::pow(std_laspy_, 2.);
+  // Translate state into Lidar measurement space
+  Eigen::VectorXd z_pred_lidar = H * x_;
+  // Update state vector mean from apriori to posterior with the
+  // incoming measurement
+  Eigen::VectorXd z = meas_package.raw_measurements_.head(n_z_lidar);
+  Eigen::VectorXd z_diff = z - z_pred_lidar;
+  // Compute measurement covariance matrix S
+  Eigen::MatrixXd S_lidar = (H * P_ * H.transpose()) + R;
+  // Compute Kalman gain
+  Eigen::MatrixXd K = P_ * H.transpose() * S_lidar.inverse();
+  // Update state mean and covariance matrix from apriori to posterior
+  // for current timestamp
+  x_ += K * z_diff;
+  P_ -= K * S_lidar * K.transpose();
+  // Compute normalized innovation score for Lidar
+  nis_lidar_ = z_diff.transpose() * S_lidar.inverse() * z_diff;
 }
 
 void UKF::updateLidar(MeasurementPackage const &meas_package)
