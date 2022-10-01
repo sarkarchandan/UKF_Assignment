@@ -1,76 +1,44 @@
-# SFND_Unscented_Kalman_Filter
-Sensor Fusion UKF Highway Project Starter Code
+# Implementation Notes for Reviewer
 
-<img src="media/ukf_highway_tracked.gif" width="700" height="400" />
+I would like to document some of my understanding and observations as part of working on this assignment of unscented Kalman filter. I have started to work on this assignment in my local machine and initially struggled with building and executing the project due to multiple memory allocation related errors. I suspect that the root of some of these errors are hidden in the intended PCL version and the Eigen version it depends on for this project. Regardless, I have implemented the Kalman filter in the UKF class. Additionally, I have been able to integrate a functional  plotting mechanism in the Udacity workspace in order to evaluate the implementation with the help NIS (Normalized Innovation Squared) metric.
 
-In this project you will implement an Unscented Kalman Filter to estimate the state of multiple cars on a highway using noisy lidar and radar measurements. Passing the project requires obtaining RMSE values that are lower that the tolerance outlined in the project rubric. 
+## My understanding and some implementation details
 
-The main program can be built and ran by doing the following from the project top directory.
+My final implementation of the UKF class exposes `ProcessMeasurement(MeasurementPackage const &meas_package)` and `Prediction(double delta_t)` as the public API layer functionality of the UKF along with some required attributes to access the NIS score from `Highway` class, after executing the predict and update steps for each car. When `tools.lidarSense` and `tools.radarSense` methods are invoked for each car, from `Highway::stepHighway` method for Lidar and Radar sensors respectively, in each case we execute one cycle of `Predict -> Update` phase of UKF. 
 
-1. mkdir build
-2. cd build
-3. cmake ..
-4. make
-5. ./ukf_highway
+In the `Predict` phase we compute the apriori state vector mean and covariance matrix. To do that we first **augment the state** (incorporate longitudinal and yaw acceleration noise components into state vector and state covariance matrix) and compute augmented sigma points. Then we execute process model to compute a priori state vector and covariance matrix.
 
-Note that the programs that need to be written to accomplish the project are src/ukf.cpp, and src/ukf.h
+In the `Update(Lidar|Radar)` we receive a measurement for time step k+1. We first translate the apriori sigma points, state vector mean, state covariance matrix into measurement space by executing measurement model. For Radar measurement model is nonlinear function. For Lidar it is straightforward. We then incorporate the incoming measurement. Finally, we compute Kalman gain and transform the apriori state vector and covariance matrix to posterior belief about the state.
 
-The program main.cpp has already been filled out, but feel free to modify it.
+- For the Lidar I have included an experimental update method `UKF::updateLidarExperimental(MeasurementPackage const &meas_package)` to see the effect on the estimate if we rely on linear transformation only while updating the state. The outcome was not so great state estimate and it was not within the desired RMSE threshold. My interpretation of the outcome is that this way of updating the state is suited for a purely linear motion model. But when we are considering variables such as yaw angle and yaw rate for CTRV model this way of updating the state may not result in accurate estimates. In the final version I have disabled this experimental method but kept for your review.
 
-<img src="media/ukf_highway.png" width="700" height="400" />
+**I would like to have your feedback on my understanding of the unscented Kalman filter implementation and my interpretation on the behavior of `UKF::updateLidarExperimental(MeasurementPackage const &meas_package)` method.**
 
-`main.cpp` is using `highway.h` to create a straight 3 lane highway environment with 3 traffic cars and the main ego car at the center. 
-The viewer scene is centered around the ego car and the coordinate system is relative to the ego car as well. The ego car is green while the 
-other traffic cars are blue. The traffic cars will be accelerating and altering their steering to change lanes. Each of the traffic car's has
-it's own UKF object generated for it, and will update each indidual one during every time step. 
+## Choice of Process Noise components and NIS Evaluation
 
-The red spheres above cars represent the (x,y) lidar detection and the purple lines show the radar measurements with the velocity magnitude along the detected angle. The Z axis is not taken into account for tracking, so you are only tracking along the X/Y axis.
+I started with both longitudinal and yaw acceleration noise components value as 1 and 1. However after some iterative executions and observations in the NIS plot I came into the conclusion that the estimations tend to be better when longitudinal acceleration noise `std_a_` is slightly higher than yaw acceleration noise `std_yawdd_`. This conclusion of mine is purely based on the observations in the NIS plot. I have made some experiments with different set of values and some of my observations in terms of NIS are as follows. For the final submission I have kept the values as `3.` and `1.` for the aforementioned noise components.
 
----
+- Longitudinal Acceleration Noise: `1.` Yaw Acceleration Noise: `2.`
 
-## Other Important Dependencies
-* cmake >= 3.5
-  * All OSes: [click here for installation instructions](https://cmake.org/install/)
-* make >= 4.1 (Linux, Mac), 3.81 (Windows)
-  * Linux: make is installed by default on most Linux distros
-  * Mac: [install Xcode command line tools to get make](https://developer.apple.com/xcode/features/)
-  * Windows: [Click here for installation instructions](http://gnuwin32.sourceforge.net/packages/make.htm)
-* gcc/g++ >= 5.4
-  * Linux: gcc / g++ is installed by default on most Linux distros
-  * Mac: same deal as make - [install Xcode command line tools](https://developer.apple.com/xcode/features/)
-  * Windows: recommend using [MinGW](http://www.mingw.org/)
- * PCL 1.2
+<img src="./NIS_UKF_1_2.png" alt="Longitudinal Acceleration Noise: `1.` Yaw Acceleration Noise: `2.`">
 
-## Basic Build Instructions
+- Longitudinal Acceleration Noise: `1.5` Yaw Acceleration Noise: `1.`
 
-1. Clone this repo.
-2. Make a build directory: `mkdir build && cd build`
-3. Compile: `cmake .. && make`
-4. Run it: `./ukf_highway`
+<img src="./NIS_UKF_1.5_1.png" alt="Longitudinal Acceleration Noise: `1.5` Yaw Acceleration Noise: `1.`">
 
-## Editor Settings
+- Longitudinal Acceleration Noise: `2.` Yaw Acceleration Noise: `1.`
 
-We've purposefully kept editor configuration files out of this repo in order to
-keep it as simple and environment agnostic as possible. However, we recommend
-using the following settings:
+<img src="./NIS_UKF_2_1.png" alt="Longitudinal Acceleration Noise: `2.` Yaw Acceleration Noise: `1.`">
 
-* indent using spaces
-* set tab width to 2 spaces (keeps the matrices in source code aligned)
+- Longitudinal Acceleration Noise: `3.` Yaw Acceleration Noise: `1.`
 
-## Code Style
+<img src="./NIS_UKF_3_1.png" alt="Longitudinal Acceleration Noise: `3.` Yaw Acceleration Noise: `1.`">
 
-Please stick to [Google's C++ style guide](https://google.github.io/styleguide/cppguide.html) as much as possible.
+In order to include this metric I have made minor adaptions into the `CMakeLists.txt`, `highway.h`, `main.cpp` and included a file in the workspace `matplotlib.h` from [C++ Matplotlib Wrapper](https://github.com/lava/matplotlib-cpp). I have experimented and verified that included plotting functionality works in the Udacity workspace. Hence, I have kept the plotting mechanism enabled for final submission.
 
-## Generating Additional Data
+**I would like to have your feedback on, how far my observations are reasonable.**
 
-This is optional!
+Thanks a lot for your time to review my project and your feedbacks on any improvement ideas.
 
-If you'd like to generate your own radar and lidar modify the code in `highway.h` to alter the cars. Also check out `tools.cpp` to
-change how measurements are taken, for instance lidar markers could be the (x,y) center of bounding boxes by scanning the PCD environment
-and performing clustering. This is similar to what was done in Sensor Fusion Lidar Obstacle Detection.
 
-## Project Instructions and Rubric
 
-This information is only accessible by people who are already enrolled in Sensor Fusion. 
-If you are enrolled, see the project page in the classroom
-for instructions and the project rubric.

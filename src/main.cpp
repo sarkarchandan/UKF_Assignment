@@ -44,7 +44,6 @@ int main(int argc, char **argv)
 	}
 
 	// NIS Metric preparation begin
-	plt::xkcd();
 	const double chi_square_95 = 7.815;
 	std::vector<double> critical_line(frame_per_sec * sec_interval, chi_square_95);
 	plt::figure_size(1280, 720);
@@ -52,7 +51,8 @@ int main(int argc, char **argv)
 	plt::named_plot("Radar NIS", highway.traffic_nis_radar);
 	plt::named_plot("Lidar NIS", highway.traffic_nis_lidar);
 	plt::legend();
-	plt::save("./NIS_UKF.png");
+	plt::title("Noise: longitudinal acc: 3. yaw acc: 1.");
+	plt::save("./NIS_UKF_3_1.png");
 	plt::show();
 	// NIS Metric preparation end
 }
