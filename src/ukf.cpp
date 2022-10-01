@@ -33,10 +33,10 @@ UKF::UKF()
   P_ = Eigen::MatrixXd::Identity(n_x_, n_x_);
 
   // Process noise standard deviation longitudinal acceleration in m/s^2
-  std_a_ = 2.; // Starting value for longitudinal acceleration noise
+  std_a_ = 1.; // Starting value for longitudinal acceleration noise
 
   // Process noise standard deviation yaw acceleration in rad/s^2
-  std_yawdd_ = 1.; // Starting value for yaw acceleration noise
+  std_yawdd_ = 0.8; // Starting value for yaw acceleration noise
 
   /**
    * DO NOT MODIFY measurement noise values below.
@@ -361,7 +361,7 @@ void UKF::UpdateRadar(MeasurementPackage meas_package)
     // Translate CTRV state vector components to Radar measurement components
     // Measurement model
     double radial_distance = std::sqrt(std::pow(pos_x, 2.) + std::pow(pos_y, 2.));
-    double radial_angle = std::atan(pos_y / pos_x);
+    double radial_angle = std::atan2(pos_y, pos_x);
     double radial_velocity = ((pos_x * std::cos(yaw_angle) * velocity) + (pos_y * std::sin(yaw_angle) * velocity)) / radial_distance;
     Eigen::VectorXd meas(n_z_radar);
     meas << radial_distance, radial_angle, radial_velocity;
